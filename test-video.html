@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bing2api 视频生成测试</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #22c55e;
+        --border: #1f2937;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: radial-gradient(1200px 600px at 20% 0%, #1e293b, #0b1020);
+        color: var(--text);
+      }
+      .wrap { max-width: 1020px; margin: 32px auto; padding: 24px; }
+      h1 { margin: 0 0 8px; font-size: 22px; }
+      p { margin: 0 0 20px; color: var(--muted); }
+      .grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: 320px 1fr;
+      }
+      @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+      .panel {
+        background: rgba(17, 24, 39, 0.9);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      }
+      label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; margin-top: 12px; }
+      label:first-child { margin-top: 0; }
+      input, select, textarea, button {
+        width: 100%;
+        background: #0b1220;
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+      textarea { min-height: 90px; resize: vertical; }
+      .row { display: flex; gap: 10px; }
+      .row button { flex: 1; }
+      button {
+        cursor: pointer;
+        background: linear-gradient(90deg, #16a34a, #22c55e);
+        border: none;
+        color: #04110a;
+        font-weight: 600;
+      }
+      button.secondary {
+        background: #0b1220;
+        color: var(--text);
+        border: 1px solid var(--border);
+        font-weight: 500;
+      }
+      button:disabled { opacity: 0.6; cursor: not-allowed; }
+      .log {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.6;
+        background: #0b1220;
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+        padding: 10px;
+        min-height: 180px;
+        max-height: 400px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .status-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .status-bar .badge {
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 11px;
+      }
+      .badge-queued   { background: #334155; color: #94a3b8; }
+      .badge-progress { background: #1e3a5f; color: #60a5fa; }
+      .badge-ok       { background: #14532d; color: #4ade80; }
+      .badge-fail     { background: #7f1d1d; color: #fca5a5; }
+      .result-panel { grid-column: 1 / -1; }
+      video {
+        width: 100%;
+        max-height: 480px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: #0b1220;
+      }
+      a { color: #7dd3fc; }
+      .elapsed { font-variant-numeric: tabular-nums; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>bing2api 视频生成测试</h1>
+      <p>通过 OpenAI 兼容接口 POST 创建异步任务，前端轮询 GET 直到视频就绪。</p>
+
+      <div class="grid">
+        <!-- Left: controls -->
+        <div class="panel">
+          <label for="baseUrl">基础地址</label>
+          <input id="baseUrl" value="http://localhost:8000" />
+
+          <label for="apiKey">API Key</label>
+          <input id="apiKey" value="bing-demo-key" />
+
+          <label for="model">模型</label>
+          <select id="model">
+            <option value="sora-v2-portrait-fast">sora-v2-portrait-fast (9:16 快速)</option>
+            <option value="sora-v2-portrait-slow">sora-v2-portrait-slow (9:16 慢速)</option>
+            <option value="sora-v2-landscape-fast">sora-v2-landscape-fast (16:9 快速)</option>
+            <option value="sora-v2-landscape-slow">sora-v2-landscape-slow (16:9 慢速)</option>
+            <option value="sora-v2-fast">sora-v2-fast (16:9 快速)</option>
+            <option value="sora-v2-slow">sora-v2-slow (16:9 慢速)</option>
+          </select>
+
+          <label for="prompt">提示词</label>
+          <textarea id="prompt">电影感延时摄影，云层掠过群山</textarea>
+
+          <label for="image">上传图片（图生视频，可选）</label>
+          <input id="image" type="file" accept="image/*" />
+
+          <label for="pollInterval">轮询间隔（秒）</label>
+          <input id="pollInterval" type="number" value="5" min="2" max="60" step="1" />
+
+          <div class="row" style="margin-top: 16px;">
+            <button id="submit" type="button">提交生成</button>
+            <button id="cancel" type="button" class="secondary" disabled>取消</button>
+          </div>
+          <div class="row" style="margin-top: 10px;">
+            <button id="check" type="button" class="secondary">检查接口 (/v1/models)</button>
+          </div>
+        </div>
+
+        <!-- Right: log -->
+        <div class="panel">
+          <label>日志</label>
+          <div id="log" class="log"></div>
+          <div class="status-bar">
+            <span id="statusBadge"></span>
+            <span id="statusText"></span>
+            <span style="flex:1"></span>
+            <span id="elapsed" class="elapsed"></span>
+          </div>
+        </div>
+
+        <!-- Bottom: video result -->
+        <div class="panel result-panel" id="resultPanel" style="display:none;">
+          <label>结果视频</label>
+          <video id="video" controls></video>
+          <div id="resultLink" style="margin-top:8px;font-size:12px;color:var(--muted);"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const logEl = $("log");
+      const videoEl = $("video");
+      const resultLinkEl = $("resultLink");
+      const resultPanel = $("resultPanel");
+      const submitBtn = $("submit");
+      const cancelBtn = $("cancel");
+      const checkBtn = $("check");
+      const statusBadge = $("statusBadge");
+      const statusText = $("statusText");
+      const elapsedEl = $("elapsed");
+
+      let pollTimer = null;
+      let abortCtrl = null;
+      let startTime = null;
+      let elapsedTimer = null;
+
+      /* ---- helpers ---- */
+      const log = (msg, level) => {
+        const t = new Date().toLocaleTimeString();
+        const prefix = level === "err" ? "ERROR " : level === "ok" ? "OK    " : "      ";
+        logEl.textContent += `[${t}] ${prefix}${msg}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+      };
+
+      const setBadge = (label, cls) => {
+        statusBadge.textContent = label;
+        statusBadge.className = "badge " + cls;
+      };
+
+      const setStatus = (text) => { statusText.textContent = text; };
+
+      const startElapsed = () => {
+        startTime = Date.now();
+        elapsedEl.textContent = "0s";
+        elapsedTimer = setInterval(() => {
+          const s = Math.floor((Date.now() - startTime) / 1000);
+          if (s < 60) elapsedEl.textContent = s + "s";
+          else elapsedEl.textContent = Math.floor(s / 60) + "m" + (s % 60) + "s";
+        }, 1000);
+      };
+
+      const stopElapsed = () => {
+        if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+      };
+
+      const resetUi = () => {
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
+        stopElapsed();
+        submitBtn.disabled = false;
+        cancelBtn.disabled = true;
+      };
+
+      const readFileAsBase64 = (file) =>
+        new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => {
+            const b64 = (r.result || "").toString().split(",")[1] || "";
+            resolve({ base64: b64, mimeType: file.type || "image/jpeg", filename: file.name || "upload.jpg" });
+          };
+          r.onerror = () => reject(r.error);
+          r.readAsDataURL(file);
+        });
+
+      /* ---- API calls ---- */
+      const apiHeaders = () => ({
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + $("apiKey").value.trim(),
+      });
+
+      const baseUrl = () => $("baseUrl").value.trim().replace(/\/$/, "");
+
+      const postGeneration = async (payload) => {
+        const url = baseUrl() + "/v1/videos/generations";
+        log("POST " + url);
+        const resp = await fetch(url, {
+          method: "POST",
+          headers: apiHeaders(),
+          body: JSON.stringify(payload),
+          signal: abortCtrl.signal,
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data?.error?.message || JSON.stringify(data));
+        return data;
+      };
+
+      const pollGeneration = async (jobId) => {
+        const url = baseUrl() + "/v1/videos/generations/" + jobId;
+        const resp = await fetch(url, {
+          headers: { Authorization: "Bearer " + $("apiKey").value.trim() },
+          signal: abortCtrl.signal,
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data?.error?.message || JSON.stringify(data));
+        return data;
+      };
+
+      /* ---- render ---- */
+      const showResult = (data) => {
+        const s = data?.status || "unknown";
+        if (s === "queued" || s === "in_progress") {
+          setBadge(s === "queued" ? "排队中" : "生成中", s === "queued" ? "badge-queued" : "badge-progress");
+          setStatus(data?.id || "");
+        } else if (s === "succeeded") {
+          setBadge("成功", "badge-ok");
+          setStatus("");
+        } else if (s === "failed") {
+          setBadge("失败", "badge-fail");
+          setStatus(data?.error?.message || "");
+        }
+
+        if (data?.result?.url) {
+          resultPanel.style.display = "";
+          videoEl.src = data.result.url;
+          resultLinkEl.innerHTML = 'URL: <a href="' + data.result.url + '" target="_blank">' + data.result.url + "</a>";
+        }
+      };
+
+      /* ---- actions ---- */
+      submitBtn.addEventListener("click", async () => {
+        logEl.textContent = "";
+        resultLinkEl.textContent = "";
+        resultPanel.style.display = "none";
+        videoEl.removeAttribute("src");
+        videoEl.load();
+        statusBadge.textContent = "";
+        statusText.textContent = "";
+        elapsedEl.textContent = "";
+
+        const prompt = $("prompt").value.trim();
+        const model = $("model").value;
+        const imageFile = $("image").files[0];
+        const interval = Math.max(2, parseInt($("pollInterval").value) || 5) * 1000;
+
+        if (!prompt) { log("请输入提示词", "err"); return; }
+
+        submitBtn.disabled = true;
+        cancelBtn.disabled = false;
+        abortCtrl = new AbortController();
+
+        try {
+          const payload = { model, prompt, async: true };
+
+          if (imageFile) {
+            log("读取图片...");
+            const img = await readFileAsBase64(imageFile);
+            payload.image_base64 = img.base64;
+            payload.image_mime_type = img.mimeType;
+            payload.image_filename = img.filename;
+            log("图片已编码 (" + Math.round(img.base64.length / 1024) + " KB)");
+          } else {
+            log("文生视频模式");
+          }
+
+          log("提交生成请求...");
+          startElapsed();
+          const resp = await postGeneration(payload);
+          const jobId = resp.id;
+          log("任务已创建: " + jobId, "ok");
+          showResult(resp);
+
+          if (resp.status === "succeeded") {
+            log("视频已就绪", "ok");
+            resetUi();
+            return;
+          }
+
+          log("开始轮询 (间隔 " + (interval / 1000) + "s)...");
+          let pollCount = 0;
+
+          pollTimer = setInterval(async () => {
+            try {
+              pollCount++;
+              const data = await pollGeneration(jobId);
+              const s = data.status;
+              log("#" + pollCount + "  " + s + (data.error ? " - " + data.error.message : ""));
+              showResult(data);
+
+              if (s === "succeeded") {
+                log("视频生成完成!", "ok");
+                resetUi();
+              } else if (s === "failed") {
+                log("生成失败: " + (data.error?.message || "未知错误"), "err");
+                resetUi();
+              }
+            } catch (err) {
+              if (err.name === "AbortError") return;
+              log("轮询出错: " + err.message, "err");
+              resetUi();
+            }
+          }, interval);
+        } catch (err) {
+          if (err.name === "AbortError") return;
+          log("错误: " + err.message, "err");
+          resetUi();
+        }
+      });
+
+      cancelBtn.addEventListener("click", () => {
+        log("已取消");
+        resetUi();
+      });
+
+      checkBtn.addEventListener("click", async () => {
+        logEl.textContent = "";
+        try {
+          const url = baseUrl() + "/v1/models";
+          log("GET " + url);
+          const resp = await fetch(url, { headers: { Authorization: "Bearer " + $("apiKey").value.trim() } });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data?.error?.message || JSON.stringify(data));
+          const ids = (data?.data || []).map((m) => m.id);
+          log("可用模型: " + ids.join(", "), "ok");
+        } catch (err) {
+          log("检查失败: " + err.message, "err");
+        }
+      });
+
+      log("就绪，选择模型后点击提交");
+    </script>
+  </body>
+</html>

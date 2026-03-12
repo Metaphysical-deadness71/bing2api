@@ -1,0 +1,7 @@
+fastapi
+httpx
+pillow
+pydantic
+regex
+requests
+uvicorn

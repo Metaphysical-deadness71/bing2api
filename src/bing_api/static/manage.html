@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理控制台 - Bing Async API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes slide-up{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+        .animate-slide-up{animation:slide-up .25s ease-out}
+        .tab-btn{transition:all .2s ease}
+    </style>
+    <script>
+        tailwind.config={theme:{extend:{colors:{border:"hsl(0 0% 89%)",input:"hsl(0 0% 89%)",ring:"hsl(221 83% 53%)",background:"hsl(0 0% 100%)",foreground:"hsl(0 0% 3.9%)",primary:{DEFAULT:"hsl(221 83% 53%)",foreground:"hsl(0 0% 100%)"},secondary:{DEFAULT:"hsl(0 0% 96.1%)",foreground:"hsl(0 0% 9%)"},muted:{DEFAULT:"hsl(0 0% 96.1%)",foreground:"hsl(0 0% 45.1%)"},destructive:{DEFAULT:"hsl(0 84.2% 60.2%)",foreground:"hsl(0 0% 98%)"}}}}}
+    </script>
+</head>
+<body class="h-full bg-slate-50 text-foreground antialiased">
+    <header class="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/90 backdrop-blur">
+        <div class="mx-auto flex h-14 max-w-7xl items-center px-6">
+            <div class="mr-4 flex items-baseline gap-3">
+                <span class="font-bold text-xl text-slate-900">Bing Async API</span>
+                <span class="text-xs rounded-full bg-blue-50 text-blue-700 px-2 py-1">管理台</span>
+            </div>
+            <div class="flex flex-1 items-center justify-end gap-3">
+                <button onclick="logout()" class="inline-flex items-center justify-center text-xs transition-colors hover:bg-slate-100 h-8 px-3 rounded-md gap-1">退出</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-6 py-6">
+        <div class="border-b border-border mb-6">
+            <nav class="flex space-x-8">
+                <button onclick="switchTab('accounts')" id="tabAccounts" class="tab-btn border-b-2 border-primary text-sm font-medium py-3 px-1 text-primary">账号管理</button>
+                <button onclick="switchTab('jobs')" id="tabJobs" class="tab-btn border-b-2 border-transparent text-sm font-medium py-3 px-1 text-muted-foreground">任务监控</button>
+                <button onclick="switchTab('generate')" id="tabGenerate" class="tab-btn border-b-2 border-transparent text-sm font-medium py-3 px-1 text-muted-foreground">生成调试</button>
+                <button onclick="switchTab('settings')" id="tabSettings" class="tab-btn border-b-2 border-transparent text-sm font-medium py-3 px-1 text-muted-foreground">系统设置</button>
+            </nav>
+        </div>
+
+        <div id="panelAccounts">
+            <div class="grid gap-4 grid-cols-2 md:grid-cols-5 mb-6">
+                <div class="rounded-xl border border-slate-200 bg-white p-4"><p class="text-sm text-muted-foreground mb-2">账号总数</p><h3 class="text-2xl font-bold" id="statTotal">-</h3></div>
+                <div class="rounded-xl border border-slate-200 bg-white p-4"><p class="text-sm text-muted-foreground mb-2">已校验账号</p><h3 class="text-2xl font-bold text-green-600" id="statReady">-</h3></div>
+                <div class="rounded-xl border border-slate-200 bg-white p-4"><p class="text-sm text-muted-foreground mb-2">待补齐 skey</p><h3 class="text-2xl font-bold text-amber-600" id="statNoSkey">-</h3></div>
+                <div class="rounded-xl border border-slate-200 bg-white p-4"><p class="text-sm text-muted-foreground mb-2">失效/待刷新</p><h3 class="text-2xl font-bold text-rose-600" id="statStale">-</h3></div>
+                <div class="rounded-xl border border-slate-200 bg-white p-4"><p class="text-sm text-muted-foreground mb-2">任务总数</p><h3 class="text-2xl font-bold text-blue-600" id="statJobs">-</h3></div>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                <div class="flex items-center justify-between gap-4 p-4 border-b border-slate-200">
+                    <div>
+                        <h3 class="text-lg font-semibold">账号列表</h3>
+                        <p class="text-xs text-muted-foreground mt-1">手动写入 Cookie，首次生成成功后会自动校验并写入 skey。</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-muted-foreground">自动修复会话</span>
+                            <label class="inline-flex items-center cursor-pointer" title="图生视频前和账号路由时，按需自动刷新短期会话值">
+                                <input type="checkbox" id="autoSessionRefreshToggle" onchange="toggleAutoSessionRefresh()" class="sr-only peer">
+                                <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:border after:border-gray-300 after:transition-all peer-checked:after:translate-x-full"></div>
+                            </label>
+                        </div>
+                        <div class="flex gap-2">
+                        <button onclick="exportAccounts()" class="inline-flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 h-9 px-3 text-sm">导出</button>
+                        <button onclick="openImportModal()" class="inline-flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 h-9 px-3 text-sm">批量导入</button>
+                        <button onclick="refreshAll()" class="inline-flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 h-9 px-3 text-sm">刷新</button>
+                        <button onclick="openAccountModal()" class="inline-flex items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 h-9 px-3 text-sm">新增账号</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 text-slate-600">
+                            <tr>
+                                <th class="text-left px-4 py-3 font-medium">名称</th>
+                                <th class="text-left px-4 py-3 font-medium">能力</th>
+                                <th class="text-left px-4 py-3 font-medium">会话</th>
+                                <th class="text-left px-4 py-3 font-medium">快速模式</th>
+                                <th class="text-left px-4 py-3 font-medium">最近活跃</th>
+                                <th class="text-right px-4 py-3 font-medium">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accountTableBody" class="divide-y divide-slate-200"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="panelJobs" class="hidden">
+            <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                <div class="flex items-center justify-between gap-4 p-4 border-b border-slate-200">
+                    <div>
+                        <h3 class="text-lg font-semibold">任务列表</h3>
+                        <p class="text-xs text-muted-foreground mt-1">最近提交的生成任务会持久化保存，方便回查失败原因与最终直链。</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select id="jobStatusFilter" onchange="renderJobs()" class="rounded-md border border-input px-3 py-2 text-sm">
+                            <option value="">全部状态</option>
+                            <option value="submitted">已提交</option>
+                            <option value="succeeded">成功</option>
+                            <option value="failed">失败</option>
+                        </select>
+                        <input id="jobErrorFilter" oninput="renderJobs()" class="rounded-md border border-input px-3 py-2 text-sm w-56" placeholder="失败原因关键字">
+                        <button onclick="loadJobs()" class="inline-flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 h-9 px-3 text-sm">刷新任务</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 text-slate-600">
+                            <tr>
+                                <th class="text-left px-4 py-3 font-medium">任务</th>
+                                <th class="text-left px-4 py-3 font-medium">模型</th>
+                                <th class="text-left px-4 py-3 font-medium">状态</th>
+                                <th class="text-left px-4 py-3 font-medium">image_id</th>
+                                <th class="text-left px-4 py-3 font-medium">耗时</th>
+                                <th class="text-left px-4 py-3 font-medium">更新时间</th>
+                                <th class="text-right px-4 py-3 font-medium">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="jobTableBody" class="divide-y divide-slate-200"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="panelGenerate" class="hidden">
+            <div class="grid gap-6 lg:grid-cols-[380px,1fr]">
+                <div class="rounded-xl border border-slate-200 bg-white p-5">
+                    <h3 class="text-lg font-semibold mb-4">生成调试</h3>
+                    <form id="generateForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">账号</label>
+                            <select id="generateAccountId" class="w-full rounded-md border border-input px-3 py-2 text-sm"></select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Prompt</label>
+                            <textarea id="generatePrompt" rows="6" class="w-full rounded-md border border-input px-3 py-2 text-sm" placeholder="输入视频提示词"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">模型</label>
+                            <select id="generateModel" class="w-full rounded-md border border-input px-3 py-2 text-sm">
+                                <option value="sora-v2-portrait-fast">sora-v2-portrait-fast</option>
+                                <option value="sora-v2-portrait-slow">sora-v2-portrait-slow</option>
+                                <option value="sora-v2-landscape-fast">sora-v2-landscape-fast</option>
+                                <option value="sora-v2-landscape-slow">sora-v2-landscape-slow</option>
+                            </select>
+                            <p class="text-xs text-muted-foreground mt-1">`fast` 对应 `mdl=0`，`slow` 对应 `mdl=1`。</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">画幅</label>
+                            <input id="generateAspectRatio" value="9:16" class="w-full rounded-md border border-input px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">超时（秒，可选）</label>
+                            <input id="generateTimeoutSeconds" type="number" step="1" min="30" class="w-full rounded-md border border-input px-3 py-2 text-sm" placeholder="留空使用系统默认">
+                            <p id="generateTimeoutHint" class="text-xs text-muted-foreground mt-1">留空时使用系统默认超时。</p>
+                        </div>
+                        <button id="generateBtn" type="submit" class="inline-flex items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 h-10 px-4 text-sm w-full">提交生成</button>
+                    </form>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-white p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">结果</h3>
+                        <button onclick="clearGenerationResult()" class="text-sm text-muted-foreground hover:text-slate-900">清空</button>
+                    </div>
+                    <div id="generationStatus" class="mb-4 text-sm text-slate-700">等待操作...</div>
+                    <div id="generationVideoWrap" class="hidden mb-4">
+                        <video id="generationVideo" controls class="w-full rounded-lg border border-slate-200 bg-slate-950 max-h-[420px]"></video>
+                        <div id="generationVideoLink" class="mt-2 text-xs text-muted-foreground break-all"></div>
+                    </div>
+                    <pre id="generationResult" class="rounded-lg bg-slate-950 text-slate-100 text-xs leading-6 p-4 overflow-auto min-h-[280px]">等待操作...</pre>
+                </div>
+            </div>
+        </div>
+
+        <div id="panelSettings" class="hidden">
+            <div class="rounded-xl border border-slate-200 bg-white p-6 max-w-3xl">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold">系统设置</h3>
+                        <p class="text-xs text-muted-foreground mt-1">保存后立即生效，并持久化到本地配置文件。</p>
+                    </div>
+                    <button onclick="loadSettings()" class="inline-flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 h-9 px-3 text-sm">刷新</button>
+                </div>
+                <form id="settingsForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">OpenAI API Keys</label>
+                        <textarea id="settingsOpenAIKeys" rows="3" class="w-full rounded-md border border-input px-3 py-2 text-sm font-mono" placeholder="bing-demo-key"></textarea>
+                        <p class="text-xs text-muted-foreground mt-1">多个 Key 使用英文逗号分隔。</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">全局代理</label>
+                        <div class="flex gap-2">
+                            <input id="settingsGlobalProxy" class="w-full rounded-md border border-input px-3 py-2 text-sm font-mono" placeholder="http://127.0.0.1:7890 或 socks5://...">
+                            <button type="button" onclick="testGlobalProxy()" class="inline-flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 h-10 px-4 text-sm">测试</button>
+                        </div>
+                        <p id="proxyTestResult" class="text-xs text-muted-foreground mt-1">填写后点击测试。</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">浏览器上传环境</label>
+                        <div class="flex gap-2">
+                            <input id="browserHealthResult" readonly class="w-full rounded-md border border-input bg-slate-50 px-3 py-2 text-sm text-slate-700" value="点击检查浏览器上传环境">
+                            <button type="button" onclick="checkBrowserHealth()" class="inline-flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 h-10 px-4 text-sm">检查</button>
+                        </div>
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">轮询间隔（秒）</label>
+                            <input id="settingsPollInterval" type="number" step="0.5" min="0.5" class="w-full rounded-md border border-input px-3 py-2 text-sm" placeholder="2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">请求超时（秒）</label>
+                            <input id="settingsRequestTimeout" type="number" step="1" min="30" class="w-full rounded-md border border-input px-3 py-2 text-sm" placeholder="120">
+                        </div>
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">快速模型超时（秒）</label>
+                            <input id="settingsFastVideoTimeout" type="number" step="1" min="60" class="w-full rounded-md border border-input px-3 py-2 text-sm" placeholder="500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">慢速模型超时（秒）</label>
+                            <input id="settingsSlowVideoTimeout" type="number" step="1" min="60" class="w-full rounded-md border border-input px-3 py-2 text-sm" placeholder="18000">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">图生视频上传模式</label>
+                        <select id="settingsImageUploadMode" class="w-full rounded-md border border-input px-3 py-2 text-sm">
+                            <option value="browser_first">浏览器优先（推荐）</option>
+                            <option value="browser_only">仅浏览器上传</option>
+                        </select>
+                        <p class="text-xs text-muted-foreground mt-1">推荐保留“浏览器优先”。“仅浏览器上传”会在浏览器上传失败时直接报错，不再回退旧逻辑。</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">常驻浏览器数</label>
+                        <input id="settingsBrowserUploadConcurrency" type="number" step="1" min="1" class="w-full rounded-md border border-input px-3 py-2 text-sm" placeholder="2">
+                        <p class="text-xs text-muted-foreground mt-1">只用于图生视频上传阶段，不影响文生视频和后续轮询。</p>
+                    </div>
+                    <div class="flex items-center justify-end gap-2 pt-2">
+                        <button type="button" onclick="resetSettings()" class="inline-flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 h-10 px-4 text-sm">重置</button>
+                        <button type="submit" class="inline-flex items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 h-10 px-4 text-sm">保存设置</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <div id="jobDetailModal" class="hidden fixed inset-0 z-50 bg-black/40 px-4 py-8 overflow-auto">
+        <div class="mx-auto max-w-3xl rounded-2xl bg-white shadow-xl border border-slate-200">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                <div>
+                    <h3 class="text-lg font-semibold">任务详情</h3>
+                    <p id="jobDetailMeta" class="text-xs text-muted-foreground mt-1">-</p>
+                </div>
+                <button onclick="closeJobDetailModal()" class="text-slate-500 hover:text-slate-900">关闭</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex flex-wrap gap-2">
+                    <button id="jobDetailOpenResource" onclick="openJobDetailResource()" class="inline-flex items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 h-9 px-3 text-sm">打开资源</button>
+                    <button onclick="copyJobDetailJson()" class="inline-flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 h-9 px-3 text-sm">复制 JSON</button>
+                </div>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div class="text-sm font-medium text-slate-900 mb-2">摘要</div>
+                        <div id="jobDetailSummary" class="text-sm text-slate-700 whitespace-pre-wrap leading-6">-</div>
+                    </div>
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div class="text-sm font-medium text-slate-900 mb-2">结果</div>
+                        <div id="jobDetailResult" class="text-sm text-slate-700 whitespace-pre-wrap break-all leading-6">-</div>
+                        <div id="jobDetailVideoWrap" class="hidden mt-3">
+                            <video id="jobDetailVideo" controls class="w-full rounded-lg border border-slate-200 bg-slate-950 max-h-[320px]"></video>
+                        </div>
+                    </div>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-white">
+                    <button onclick="toggleJobDetailJson()" class="w-full flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-slate-50">
+                        <span>完整 JSON</span>
+                        <span id="jobDetailJsonToggle">展开</span>
+                    </button>
+                    <div id="jobDetailJsonWrap" class="hidden border-t border-slate-200 p-4">
+                        <pre id="jobDetailContent" class="rounded-lg bg-slate-950 text-slate-100 text-xs leading-6 p-4 overflow-auto max-h-[420px]">-</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="accountModal" class="hidden fixed inset-0 z-50 bg-black/40 px-4 py-8 overflow-auto">
+        <div class="mx-auto max-w-2xl rounded-2xl bg-white shadow-xl border border-slate-200">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                <h3 id="accountModalTitle" class="text-lg font-semibold">新增账号</h3>
+                <button onclick="closeAccountModal()" class="text-slate-500 hover:text-slate-900">关闭</button>
+            </div>
+            <form id="accountForm" class="p-6 space-y-4">
+                <input id="accountId" type="hidden">
+                <div>
+                    <label class="block text-sm font-medium mb-1">名称</label>
+                    <input id="accountName" class="w-full rounded-md border border-input px-3 py-2 text-sm" placeholder="比如: 主账号 01">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Cookie Header</label>
+                    <textarea id="accountCookieHeader" rows="8" class="w-full rounded-md border border-input px-3 py-2 text-sm font-mono" placeholder="_U=...; SRCHHPGUSR=...; ..."></textarea>
+                    <p class="text-xs text-muted-foreground mt-1">直接粘贴浏览器请求头里的整段 Cookie。</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">账号代理（可选）</label>
+                    <input id="accountProxy" class="w-full rounded-md border border-input px-3 py-2 text-sm font-mono" placeholder="http://127.0.0.1:7890 或 socks5://...">
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeAccountModal()" class="inline-flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 h-10 px-4 text-sm">取消</button>
+                    <button id="accountSubmitBtn" type="submit" class="inline-flex items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 h-10 px-4 text-sm">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="importModal" class="hidden fixed inset-0 z-50 bg-black/40 px-4 py-8 overflow-auto">
+        <div class="mx-auto max-w-3xl rounded-2xl bg-white shadow-xl border border-slate-200">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                <h3 class="text-lg font-semibold">批量导入账号</h3>
+                <button onclick="closeImportModal()" class="text-slate-500 hover:text-slate-900">关闭</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-sm text-muted-foreground">粘贴 JSON 数组。每项支持 `account_id`、`name`、`cookie_header`、`metadata`。带 `account_id` 会更新现有账号。</p>
+                <div class="flex items-center gap-3">
+                    <input id="importFile" type="file" accept="application/json,.json" class="text-sm">
+                    <button type="button" onclick="loadImportFile()" class="inline-flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 h-9 px-3 text-sm">读取文件</button>
+                </div>
+                <textarea id="importPayload" rows="14" class="w-full rounded-md border border-input px-3 py-2 text-sm font-mono" placeholder='[{"name":"主账号","cookie_header":"_U=...; SRCHHPGUSR=..."}]'></textarea>
+                <div class="flex items-center justify-end gap-2">
+                    <button type="button" onclick="closeImportModal()" class="inline-flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 h-10 px-4 text-sm">取消</button>
+                    <button type="button" onclick="submitImport()" class="inline-flex items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 h-10 px-4 text-sm">开始导入</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let accounts=[];
+        let jobs=[];
+        let currentSettings={};
+        let generationPollTimer=null;
+        const $=id=>document.getElementById(id);
+        const checkAuth=()=>{const t=localStorage.getItem('adminToken');return t||(location.href='/login',null),t};
+        const apiRequest=async(url,opts={})=>{const t=checkAuth();if(!t)return null;const headers={Authorization:`Bearer ${t}`,...opts.headers};const hasBody=opts.body!==undefined;if(hasBody&&!headers['Content-Type'])headers['Content-Type']='application/json';const r=await fetch(url,{...opts,headers});if(r.status===401){localStorage.removeItem('adminToken');location.href='/login';return null}return r};
+        const showToast=(m,t='info')=>{const d=document.createElement('div'),bc={success:'bg-green-600',error:'bg-rose-600',info:'bg-slate-900'};d.className=`fixed bottom-4 right-4 ${bc[t]||bc.info} text-white px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium z-50 animate-slide-up`;d.textContent=m;document.body.appendChild(d);setTimeout(()=>{d.style.opacity='0';d.style.transition='opacity .3s';setTimeout(()=>d.parentNode&&document.body.removeChild(d),300)},2200)};
+        const escapeHtml=(v='')=>v.replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+        const parseUtcDate=v=>{if(!v)return null;const normalized=/Z|[+-]\d\d:\d\d$/.test(v)?v:`${v}Z`;const d=new Date(normalized);return Number.isNaN(d.getTime())?null:d;};
+        const formatDate=v=>{const d=parseUtcDate(v);return d?d.toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false}):'-';};
+        const formatDuration=(created,updated,status)=>{const start=parseUtcDate(created);if(!start)return '-';const end=(status==='succeeded'||status==='failed')&&updated?(parseUtcDate(updated)||new Date()):new Date();const diff=Math.max(0,Math.floor((end.getTime()-start.getTime())/1000));if(diff<60)return `${diff}s`;if(diff<3600)return `${Math.floor(diff/60)}m${diff%60}s`;const h=Math.floor(diff/3600);const m=Math.floor((diff%3600)/60);return `${h}h${m}m`;};
+        const skeyLabel=v=>v?`${v.slice(0,6)}...${v.slice(-6)}`:'未设置';
+        const statusLabel=(status)=>{const labels={ready:'可用',new:'未校验',stale:'失效'};return labels[status]||status||'未知'};
+        const jobStatusLabel=(status)=>{const labels={submitted:'已提交',processing:'处理中',queued:'排队中',succeeded:'成功',failed:'失败'};return labels[status]||status||'未知'};
+        const queueStatusLabel=(status)=>{const labels={queued:'排队中',processing:'处理中',completed:'完成',failed:'失败'};return labels[status]||status||'未知'};
+        const resultModeLabel=(mode)=>{const labels={create:'创建',detail_async:'详情',queued:'排队'};return labels[mode]||mode||'-'};
+        const statusBadge=(status)=>{const map={ready:'bg-green-50 text-green-700',new:'bg-amber-50 text-amber-700',stale:'bg-rose-50 text-rose-700'};return `<span class="inline-flex items-center rounded px-2 py-1 text-xs ${map[status]||'bg-slate-100 text-slate-700'}">${escapeHtml(statusLabel(status))}</span>`};
+        const jobStatusBadge=(status)=>{const map={submitted:'bg-blue-50 text-blue-700',processing:'bg-blue-50 text-blue-700',queued:'bg-slate-100 text-slate-700',succeeded:'bg-green-50 text-green-700',failed:'bg-rose-50 text-rose-700'};return `<span class="inline-flex items-center rounded px-2 py-1 text-xs ${map[status]||'bg-slate-100 text-slate-700'}">${escapeHtml(jobStatusLabel(status))}</span>`};
+        const capabilitySummary=(a)=>{const textEnabled=(a.text_video_enabled||'').toLowerCase()==='true';const imageEnabled=(a.image_video_enabled||'').toLowerCase()==='true';const hasFull=a.has_raw_cookie_header; if(textEnabled&&imageEnabled&&hasFull)return '文/图生视频可用'; if(textEnabled)return '仅文生视频可用'; if(hasFull)return '待刷新完整会话'; return '待补完整会话';};
+        const capabilityTone=(a)=>{const textEnabled=(a.text_video_enabled||'').toLowerCase()==='true';const imageEnabled=(a.image_video_enabled||'').toLowerCase()==='true';const hasFull=a.has_raw_cookie_header; if(textEnabled&&imageEnabled&&hasFull)return 'bg-green-50 text-green-700'; if(textEnabled)return 'bg-amber-50 text-amber-700'; return 'bg-slate-100 text-slate-700';};
+        const sessionSummary=(a)=>{if(!a.has_raw_cookie_header)return {title:'未保存完整会话',tone:'bg-rose-50 text-rose-700'}; const caps=a.metadata?.video_capabilities||{}; const hasRefresh=!!caps.last_session_refresh_at; if(!hasRefresh)return {title:'待刷新',tone:'bg-amber-50 text-amber-700'}; return {title:'已保存完整会话',tone:'bg-blue-50 text-blue-700'};};
+        const lastActiveLabel=(a)=>{const caps=a.metadata?.video_capabilities||{}; if(caps.last_image_video_ok_at)return '图生视频成功'; if(caps.last_text_video_ok_at)return '文生视频成功'; if(a.last_validated_at)return '已校验'; return '暂无记录';};
+
+        const loadStats=async()=>{const r=await apiRequest('/api/stats');if(!r)return;const d=await r.json();$('statTotal').textContent=d.total_accounts||0;$('statReady').textContent=d.ready_accounts||0;$('statNoSkey').textContent=d.accounts_without_skey||0;$('statStale').textContent=d.stale_accounts||0;$('statJobs').textContent=d.total_jobs||0;};
+        const loadAccounts=async()=>{const r=await apiRequest('/api/admin/accounts');if(!r)return;accounts=await r.json();renderAccounts();renderAccountOptions();};
+        const loadSettings=async()=>{const r=await apiRequest('/api/admin/settings');if(!r)return;currentSettings=await r.json();$('settingsOpenAIKeys').value=currentSettings.openai_api_keys||'';$('settingsGlobalProxy').value=currentSettings.global_proxy_url||'';$('settingsPollInterval').value=currentSettings.default_poll_interval_seconds||'';$('settingsRequestTimeout').value=currentSettings.request_timeout_seconds||'';$('settingsFastVideoTimeout').value=currentSettings.default_fast_video_timeout_seconds||'';$('settingsSlowVideoTimeout').value=currentSettings.default_slow_video_timeout_seconds||'';$('settingsImageUploadMode').value=currentSettings.image_upload_mode||'browser_first';$('settingsBrowserUploadConcurrency').value=currentSettings.browser_upload_concurrency||2;$('autoSessionRefreshToggle').checked=!!currentSettings.auto_session_refresh_enabled;$('proxyTestResult').textContent='填写后点击测试。';updateGenerateTimeoutHint();};
+        const checkBrowserHealth=async()=>{const r=await apiRequest('/api/admin/browser-health');if(!r)return;const d=await r.json();if(!r.ok){$('browserHealthResult').value=d.detail||'检查失败';return;}if(d.ok){$('browserHealthResult').value=`可用 · ${d.browser_executable||'已检测到浏览器'}`;return;}$('browserHealthResult').value=d.detail||'浏览器上传环境不可用';};
+        const renderAccounts=()=>{
+            const rows = accounts.map(a=>{
+                const fastText=a.fast_mode_remaining?`剩余 ${escapeHtml(a.fast_mode_remaining)} 次`:(a.fast_mode_available==='true'?'可用':a.fast_mode_available==='false'?'已用尽':'待检测');
+                const session=sessionSummary(a);
+                const active=lastActiveLabel(a);
+                return `<tr><td class="px-4 py-3"><div class="font-medium text-slate-900">${escapeHtml(a.name||a.account_id)}</div><div class="text-xs text-muted-foreground">${escapeHtml(a.account_id)}</div></td><td class="px-4 py-3"><div class="inline-flex items-center rounded px-2 py-1 text-xs ${capabilityTone(a)}">${escapeHtml(capabilitySummary(a))}</div></td><td class="px-4 py-3"><div class="inline-flex items-center rounded px-2 py-1 text-xs ${session.tone}">${escapeHtml(session.title)}</div></td><td class="px-4 py-3"><div class="text-sm text-slate-700">${fastText}</div></td><td class="px-4 py-3 text-xs text-muted-foreground">${escapeHtml(lastActiveLabel(a))}</td><td class="px-4 py-3 text-right"><button onclick="openAccountModal('${a.account_id}')" class="inline-flex items-center justify-center rounded-md hover:bg-slate-100 h-8 px-3 text-xs mr-1">编辑</button><button onclick="refreshFastMode('${a.account_id}')" class="inline-flex items-center justify-center rounded-md hover:bg-slate-100 h-8 px-3 text-xs mr-1">刷新快模式</button><button onclick="refreshSession('${a.account_id}')" class="inline-flex items-center justify-center rounded-md hover:bg-slate-100 h-8 px-3 text-xs mr-1">修复会话</button><button onclick="deleteAccount('${a.account_id}')" class="inline-flex items-center justify-center rounded-md hover:bg-rose-50 hover:text-rose-600 h-8 px-3 text-xs">删除</button></td></tr>`;
+            }).join('');
+            $('accountTableBody').innerHTML = rows || '<tr><td colspan="6" class="px-4 py-10 text-center text-muted-foreground">暂无账号</td></tr>';
+        };
+        const resetSettings=()=>{if(!currentSettings)return;loadSettings();};
+        const testGlobalProxy=async()=>{const proxy=$('settingsGlobalProxy').value.trim();if(!proxy){$('proxyTestResult').textContent='请输入代理地址后再测试。';return;}const r=await apiRequest('/api/admin/settings/test-proxy',{method:'POST',body:JSON.stringify({proxy_url:proxy})});if(!r)return;const d=await r.json();if(!r.ok){$('proxyTestResult').textContent=d.detail||'测试失败';return;}$('proxyTestResult').textContent=`可用：${d.elapsed_ms}ms (${d.target})`;};
+        const renderAccountOptions=()=>{$('generateAccountId').innerHTML=accounts.map(a=>`<option value="${a.account_id}">${escapeHtml(a.name||a.account_id)}${a.has_skey?'':' (无 skey)'}${a.fast_mode_remaining?` · fast:${escapeHtml(a.fast_mode_remaining)}`:''}</option>`).join('');};
+        const syncModelToAspect=()=>{const model=$('generateModel').value;if(model.includes('portrait'))$('generateAspectRatio').value='9:16';if(model.includes('landscape'))$('generateAspectRatio').value='16:9';};
+        const loadJobs=async()=>{const r=await apiRequest('/api/admin/jobs?limit=200');if(!r)return;jobs=await r.json();renderJobs();};
+        const filteredJobs=()=>{const status=$('jobStatusFilter').value;const errorKeyword=$('jobErrorFilter').value.trim().toLowerCase();return jobs.filter(job=>{if(status&&job.status!==status)return false;if(errorKeyword){const haystack=`${job.message||''} ${job.prompt||''}`.toLowerCase();if(!haystack.includes(errorKeyword))return false}return true})};
+        const jobResourceUrl=(job)=>job?.detail?.content_url||job?.final_url||'';
+        const renderJobs=()=>{$('jobTableBody').innerHTML=filteredJobs().map(j=>{const url=jobResourceUrl(j);const showResource=j.status==='succeeded'&&url;const model=(j.request_snapshot&&j.request_snapshot.openai_model)||'-';return `<tr><td class="px-4 py-3 align-top max-w-[420px]"><div class="font-medium text-slate-900 break-words">${escapeHtml(j.prompt||'-').slice(0,80)}</div></td><td class="px-4 py-3 align-top text-xs font-mono text-slate-700 whitespace-nowrap">${escapeHtml(model)}</td><td class="px-4 py-3 align-top">${jobStatusBadge(j.status)}</td><td class="px-4 py-3 align-top text-xs font-mono whitespace-nowrap">${escapeHtml(j.selected_image_id||j.detail?.image_id||'-')}</td><td class="px-4 py-3 align-top text-xs font-mono whitespace-nowrap ${j.status==='succeeded'?'text-green-700':j.status==='failed'?'text-rose-600':'text-blue-600'}">${formatDuration(j.created_at,j.updated_at,j.status)}</td><td class="px-4 py-3 align-top text-xs text-muted-foreground whitespace-nowrap">${formatDate(j.updated_at||j.created_at)}</td><td class="px-4 py-3 align-top text-right"><div class="inline-flex flex-wrap justify-end gap-1"><button onclick="showJobDetail('${j.job_id}')" class="inline-flex items-center justify-center rounded-md hover:bg-blue-50 hover:text-blue-700 h-8 px-3 text-xs">查看</button>${showResource?`<a href="${escapeHtml(url)}" target="_blank" class="inline-flex items-center justify-center rounded-md hover:bg-green-50 hover:text-green-700 h-8 px-3 text-xs">打开资源</a>`:''}</div></td></tr>`;}).join('')||'<tr><td colspan="7" class="px-4 py-10 text-center text-muted-foreground">暂无任务</td></tr>';};
+        const accountLabel=id=>{const account=accounts.find(item=>item.account_id===id);return account?(account.name||account.account_id):id;};
+        const refreshAll=async()=>{await Promise.all([loadStats(),loadAccounts(),loadJobs(),loadSettings()]);};
+        const switchTab=t=>{['accounts','jobs','generate','settings'].forEach(n=>{const active=n===t;const cap=n.charAt(0).toUpperCase()+n.slice(1);$(`panel${cap}`).classList.toggle('hidden',!active);$(`tab${cap}`).classList.toggle('border-primary',active);$(`tab${cap}`).classList.toggle('text-primary',active);$(`tab${cap}`).classList.toggle('border-transparent',!active);$(`tab${cap}`).classList.toggle('text-muted-foreground',!active);});};
+        const logout=async()=>{const token=checkAuth();if(!token)return;await fetch('/api/logout',{method:'POST',headers:{Authorization:`Bearer ${token}`}});localStorage.removeItem('adminToken');location.href='/login';};
+
+        const openAccountModal=(accountId=null)=>{const account=accountId?accounts.find(item=>item.account_id===accountId):null;$('accountModalTitle').textContent=account?'编辑账号':'新增账号';$('accountId').value=account?.account_id||'';$('accountName').value=account?.name||'';$('accountCookieHeader').value=account?.cookie_header||'';$('accountProxy').value=account?.metadata?.proxy_url||'';$('accountModal').classList.remove('hidden');};
+        const closeAccountModal=()=>{$('accountModal').classList.add('hidden');$('accountForm').reset();$('accountId').value='';};
+        const openImportModal=()=>{$('importModal').classList.remove('hidden');};
+        const closeImportModal=()=>{$('importModal').classList.add('hidden');$('importPayload').value='';$('importFile').value='';};
+        const loadImportFile=async()=>{const file=$('importFile').files?.[0];if(!file)return showToast('请先选择 JSON 文件','error');try{$('importPayload').value=await file.text();showToast('文件已读取，可直接导入','success')}catch(e){showToast('读取文件失败','error')}};
+        $('accountForm').addEventListener('submit',async(e)=>{e.preventDefault();const accountId=$('accountId').value.trim();const payload={name:$('accountName').value.trim()||null,cookie_header:$('accountCookieHeader').value.trim()||null,metadata:{proxy_url:$('accountProxy').value.trim()||null}};if(!payload.cookie_header&&!accountId)return showToast('新增账号时至少要提供 Cookie Header','error');const url=accountId?`/api/admin/accounts/${accountId}`:'/api/admin/accounts';const method=accountId?'PUT':'POST';const r=await apiRequest(url,{method,body:JSON.stringify(payload)});if(!r)return;const d=await r.json();if(!r.ok)return showToast(d.detail||'保存失败','error');closeAccountModal();await refreshAll();showToast(accountId?'账号更新成功':'账号创建成功','success');});
+        const deleteAccount=async(accountId)=>{if(!confirm('确定删除这个账号吗？'))return;const r=await apiRequest(`/api/admin/accounts/${accountId}`,{method:'DELETE'});if(!r)return;const d=await r.json().catch(()=>({success:r.ok}));if(!r.ok)return showToast(d.detail||'删除失败','error');await refreshAll();showToast('账号已删除','success');};
+        const exportAccounts=async()=>{const r=await apiRequest('/api/admin/accounts/export');if(!r)return;const data=await r.json();const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`bing-accounts-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(link);link.click();document.body.removeChild(link);URL.revokeObjectURL(url);showToast(`已导出 ${data.length||0} 个账号`,'success');};
+        const submitImport=async()=>{let parsed;try{parsed=JSON.parse($('importPayload').value.trim()||'[]')}catch(e){return showToast('JSON 格式错误','error')}if(!Array.isArray(parsed)||parsed.length===0)return showToast('请粘贴非空 JSON 数组','error');const r=await apiRequest('/api/admin/accounts/import',{method:'POST',body:JSON.stringify({accounts:parsed})});if(!r)return;const d=await r.json();if(!r.ok)return showToast(d.detail||'导入失败','error');closeImportModal();await refreshAll();showToast(`导入完成：新增 ${d.created||0} / 更新 ${d.updated||0} / 失败 ${d.failed||0}`,'success');};
+        const refreshFastMode=async(accountId)=>{showToast('正在刷新快速模式状态...','info');const r=await apiRequest(`/api/admin/accounts/${accountId}/refresh-fast-mode`,{method:'POST'});if(!r)return;const d=await r.json();await refreshAll();if(!r.ok)return showToast(d.detail||'刷新快速模式失败','error');showToast(`快速模式状态已更新${d.fast_mode_remaining?`，剩余 ${d.fast_mode_remaining} 次`:''}`,'success');};
+        const refreshSession=async(accountId)=>{showToast('正在修复会话...','info');const r=await apiRequest(`/api/admin/accounts/${accountId}/refresh-session`,{method:'POST'});if(!r)return;const d=await r.json();await refreshAll();if(!r.ok)return showToast(d.detail||'修复会话失败','error');showToast(`会话已修复${d.cookie_names?.includes('_EDGE_S')?'，已更新短期会话':''}`,'success');};
+        const toggleAutoSessionRefresh=async()=>{const enabled=$('autoSessionRefreshToggle').checked;const payload={openai_api_keys:currentSettings.openai_api_keys||'',global_proxy_url:currentSettings.global_proxy_url||'',default_poll_interval_seconds:Number(currentSettings.default_poll_interval_seconds||2),request_timeout_seconds:Number(currentSettings.request_timeout_seconds||120),default_fast_video_timeout_seconds:Number(currentSettings.default_fast_video_timeout_seconds||500),default_slow_video_timeout_seconds:Number(currentSettings.default_slow_video_timeout_seconds||18000),image_upload_mode:currentSettings.image_upload_mode||$('settingsImageUploadMode').value||'browser_first',browser_upload_concurrency:Number(currentSettings.browser_upload_concurrency||$('settingsBrowserUploadConcurrency').value||2),auto_session_refresh_enabled:enabled};const r=await apiRequest('/api/admin/settings',{method:'PUT',body:JSON.stringify(payload)});if(!r){$('autoSessionRefreshToggle').checked=!enabled;return;}const d=await r.json();if(!r.ok){$('autoSessionRefreshToggle').checked=!enabled;return showToast(d.detail||'更新自动修复开关失败','error');}currentSettings=d;showToast(enabled?'自动修复会话已启用':'自动修复会话已禁用','success');};
+
+        $('settingsForm').addEventListener('submit',async(e)=>{e.preventDefault();const payload={openai_api_keys:$('settingsOpenAIKeys').value.trim()||'',global_proxy_url:$('settingsGlobalProxy').value.trim()||'',default_poll_interval_seconds:parseFloat($('settingsPollInterval').value||'0')||2,request_timeout_seconds:parseFloat($('settingsRequestTimeout').value||'0')||120,default_fast_video_timeout_seconds:parseFloat($('settingsFastVideoTimeout').value||'0')||500,default_slow_video_timeout_seconds:parseFloat($('settingsSlowVideoTimeout').value||'0')||18000,image_upload_mode:$('settingsImageUploadMode').value||'browser_first',browser_upload_concurrency:parseInt($('settingsBrowserUploadConcurrency').value||'2',10)||2,auto_session_refresh_enabled:$('autoSessionRefreshToggle').checked};const r=await apiRequest('/api/admin/settings',{method:'PUT',body:JSON.stringify(payload)});if(!r)return;const d=await r.json();if(!r.ok)return showToast(d.detail||'保存失败','error');currentSettings=d;showToast('设置已保存并生效','success');await loadSettings();});
+        $('generateModel').addEventListener('change',syncModelToAspect);
+        const updateGenerateTimeoutHint=()=>{const fast=Number(currentSettings?.default_fast_video_timeout_seconds||500);const slow=Number(currentSettings?.default_slow_video_timeout_seconds||18000);$('generateTimeoutHint').textContent=`留空时使用系统默认：快速 ${fast}s / 慢速 ${slow}s。`;};
+        const pollGenerationJob=async(jobId)=>{if(generationPollTimer)clearInterval(generationPollTimer);generationPollTimer=setInterval(async()=>{await loadJobs();const job=jobs.find(item=>item.job_id===jobId);if(!job)return;renderGenerationJob(job);if(job.status==='succeeded'||job.status==='failed'){clearInterval(generationPollTimer);generationPollTimer=null;}},2500);};
+        const renderGenerationJob=(job)=>{const url=jobResourceUrl(job);const model=(job.request_snapshot&&job.request_snapshot.openai_model)||'-';$('generationStatus').textContent=`${jobStatusLabel(job.status)} · ${model}${job.message?` · ${job.message}`:''}`;$('generationResult').textContent=JSON.stringify(job,null,2);if(job.status==='succeeded'&&url){$('generationVideoWrap').classList.remove('hidden');$('generationVideo').src=url;$('generationVideoLink').innerHTML=`<a href="${escapeHtml(url)}" target="_blank" class="text-blue-600 hover:underline">${escapeHtml(url)}</a>`;}else{$('generationVideoWrap').classList.add('hidden');$('generationVideo').removeAttribute('src');$('generationVideoLink').textContent='';}};
+        $('generateForm').addEventListener('submit',async(e)=>{e.preventDefault();const model=$('generateModel').value;const timeoutValue=parseFloat($('generateTimeoutSeconds').value||'');const payload={account_id:$('generateAccountId').value,prompt:$('generatePrompt').value.trim(),aspect_ratio:$('generateAspectRatio').value.trim()||'9:16',wait_for_result:false,use_queue:true,openai_model:model,timeout_seconds:Number.isFinite(timeoutValue)&&timeoutValue>0?timeoutValue:null,extra_query:{mdl:model.endsWith('-fast')?'0':'1',ar:model.includes('portrait')?'1':'5'}};if(!payload.account_id)return showToast('请先选择账号','error');if(!payload.prompt)return showToast('请输入 Prompt','error');const btn=$('generateBtn');btn.disabled=true;btn.textContent='提交中...';const r=await apiRequest('/api/admin/videos/generations',{method:'POST',body:JSON.stringify(payload)});btn.disabled=false;btn.textContent='提交生成';if(!r)return;const d=await r.json();if(!r.ok){$('generationStatus').textContent='生成失败';$('generationResult').textContent=JSON.stringify(d,null,2);return showToast(d.detail||'生成失败','error');}showToast('任务已加入队列','success');await refreshAll();const job=jobs.find(item=>item.job_id===d.job_id)||d;renderGenerationJob(job);if(job.job_id)pollGenerationJob(job.job_id);switchTab('generate');});
+        const clearGenerationResult=()=>{if(generationPollTimer)clearInterval(generationPollTimer);generationPollTimer=null;$('generationStatus').textContent='等待操作...';$('generationResult').textContent='等待操作...';$('generationVideoWrap').classList.add('hidden');$('generationVideo').removeAttribute('src');$('generationVideoLink').textContent='';};
+        let activeJobDetail=null;
+        const toggleJobDetailJson=()=>{const wrap=$('jobDetailJsonWrap');const label=$('jobDetailJsonToggle');const hidden=wrap.classList.contains('hidden');wrap.classList.toggle('hidden',!hidden);label.textContent=hidden?'收起':'展开';};
+        const showJobDetail=(jobId)=>{const job=jobs.find(item=>item.job_id===jobId);if(!job)return;activeJobDetail=job;$('jobDetailContent').textContent=JSON.stringify(job,null,2);$('jobDetailJsonWrap').classList.add('hidden');$('jobDetailJsonToggle').textContent='展开';const accountHint=job.account_name?`${job.account_name} (${job.account_id})`:(accountLabel(job.account_id)||'-');const uHint=job.account_u_preview||'-';const clientHint=job.client_u_preview||'-';const model=(job.request_snapshot&&job.request_snapshot.openai_model)||'-';$('jobDetailMeta').textContent=`${accountHint} · _U(账号) ${uHint} · _U(实际) ${clientHint} · ${model} · ${jobStatusLabel(job.status)} · 耗时 ${formatDuration(job.created_at,job.updated_at,job.status)} · ${formatDate(job.updated_at||job.created_at)}`;const imageId=job.selected_image_id||job.detail?.image_id||null;const summaryParts=[`状态：${jobStatusLabel(job.status)}`,`模型：${model}`,imageId?`image_id：${imageId}`:null].filter(Boolean);$('jobDetailSummary').textContent=summaryParts.join('\n');const url=jobResourceUrl(job);const openBtn=$('jobDetailOpenResource');if(job.status==='succeeded'&&url){$('jobDetailResult').textContent=`视频已生成，可直接播放或打开资源链接。\n${url}`;$('jobDetailVideoWrap').classList.remove('hidden');$('jobDetailVideo').src=url;openBtn.classList.remove('opacity-50','pointer-events-none');openBtn.setAttribute('data-url',url);}else if(job.status==='failed'){$('jobDetailResult').textContent=job.message||'任务失败，但没有返回更详细的错误信息。';$('jobDetailVideoWrap').classList.add('hidden');$('jobDetailVideo').removeAttribute('src');openBtn.classList.add('opacity-50','pointer-events-none');openBtn.removeAttribute('data-url');}else{$('jobDetailResult').textContent=job.message||'任务仍在处理中，请稍后刷新任务列表。';$('jobDetailVideoWrap').classList.add('hidden');$('jobDetailVideo').removeAttribute('src');openBtn.classList.add('opacity-50','pointer-events-none');openBtn.removeAttribute('data-url');}$('jobDetailModal').classList.remove('hidden');};
+        const closeJobDetailModal=()=>{$('jobDetailModal').classList.add('hidden');activeJobDetail=null;};
+        const openJobDetailResource=()=>{const url=$('jobDetailOpenResource').getAttribute('data-url');if(!url)return;window.open(url,'_blank');};
+        const copyJobDetailJson=async()=>{if(!activeJobDetail)return;try{await navigator.clipboard.writeText(JSON.stringify(activeJobDetail,null,2));showToast('已复制任务详情','success');}catch(e){showToast('复制失败，请手动选择','error');}};
+        const retryJob=async(jobId)=>{const useQueue=confirm('是否将这次重试加入队列？\n\n选择“确定”进入队列，选择“取消”则直接同步重试。');let url=`/api/admin/jobs/${jobId}/retry`;const payload={wait_for_result:!useQueue};if(useQueue)url+='?use_queue=1';const r=await apiRequest(url,{method:'POST',body:JSON.stringify(payload)});if(!r)return;const d=await r.json();$('generationResult').textContent=JSON.stringify(d,null,2);await refreshAll();if(!r.ok)return showToast(d.detail||'任务重试失败','error');switchTab('generate');showToast(useQueue?'重试任务已加入队列':'已提交重试任务','success');};
+
+        window.addEventListener('keydown',e=>{if(e.key==='Escape')closeJobDetailModal();});
+        window.addEventListener('DOMContentLoaded',async()=>{if(!checkAuth())return;syncModelToAspect();await refreshAll();});
+    </script>
+</body>
+</html>

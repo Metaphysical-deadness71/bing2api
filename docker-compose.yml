@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  bing2api:
+    build: .
+    container_name: bing2api
+    ports:
+      - "8000:8000"
+    environment:
+      BING_ADMIN_USERNAME: admin
+      BING_ADMIN_PASSWORD: admin123
+      BING_OPENAI_API_KEYS: bing-demo-key
+      BING_QUEUE_CONCURRENCY: "2"
+      BING_POLL_INTERVAL: "2"
+      BING_VIDEO_TIMEOUT: "180"
+      BING_REQUEST_TIMEOUT: "120"
+      BING_GLOBAL_PROXY: ""
+      BING_DATA_DIR: /data
+    volumes:
+      - ./data:/data
