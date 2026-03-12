@@ -170,6 +170,17 @@ curl http://localhost:8000/v1/videos/generations/job_xxx \
 如果传 `"async": false`，服务端会等待任务完成后一次性返回 JSON 结果；这仍然是**阻塞式单次响应**，不是流式输出。
 本项目提供视频生成前端：test-video.html
 
+## 🎯 支持的模型
+
+| 模型 ID | 画幅 | 模式 | 说明 |
+| --- | --- | --- | --- |
+| `sora-v2-fast` | 16:9 | fast | 文生视频 / 图生视频 |
+| `sora-v2-slow` | 16:9 | slow | 文生视频 / 图生视频 |
+| `sora-v2-landscape-fast` | 16:9 | fast | 文生视频 / 图生视频 |
+| `sora-v2-landscape-slow` | 16:9 | slow | 文生视频 / 图生视频 |
+| `sora-v2-portrait-fast` | 9:16 | fast | 文生视频 / 图生视频 |
+| `sora-v2-portrait-slow` | 9:16 | slow | 文生视频 / 图生视频 |
+
 ---
 
 ## ⚠️ 重要限制
@@ -275,16 +286,3 @@ Promise.all([
 - 轮询间隔 / 超时参数（快/慢分开）
 - 图生视频上传模式（浏览器优先 / 仅浏览器上传）
 - 图生视频浏览器上传并发上限
-
----
-
-## 🎯 支持的模型
-
-| 模型 ID | 画幅 | 模式 | 说明 |
-| --- | --- | --- | --- |
-| `sora-v2-fast` | 16:9 | fast | 文生视频 / 图生视频 |
-| `sora-v2-slow` | 16:9 | slow | 文生视频 / 图生视频 |
-| `sora-v2-landscape-fast` | 16:9 | fast | 文生视频 / 图生视频 |
-| `sora-v2-landscape-slow` | 16:9 | slow | 文生视频 / 图生视频 |
-| `sora-v2-portrait-fast` | 9:16 | fast | 文生视频 / 图生视频 |
-| `sora-v2-portrait-slow` | 9:16 | slow | 文生视频 / 图生视频 |
